@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sticker Price Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 2rem;
+      text-align: center;
+    }
+    input, button {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      border: none;
+    }
+    input {
+      width: 100px;
+    }
+    button {
+      background: red;
+      color: white;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: lime;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sticker Price Calculator</h1>
+  <p>Enter dimensions in inches (before border):</p>
+
+  <label for="width">Width:</label>
+  <input type="number" id="width" step="0.01" min="0.25" />
+
+  <label for="height">Height:</label>
+  <input type="number" id="height" step="0.01" min="0.25" />
+
+  <br />
+  <label for="quantity">Quantity:</label>
+  <input type="number" id="quantity" step="1" min="1" />
+
+  <br />
+  <label for="fit">Override Fit Per Sheet (optional):</label>
+  <input type="number" id="fit" step="1" min="1" placeholder="e.g. 10" />
+  <br />
+  <button onclick="calculatePrice()">Calculate</button>
+
+  <div id="result"></div>
+
+  <script>
+    function floor(x) {
+      return Math.floor(x);
+    }
+
+    function getDiscountRate(qty) {
+      if (qty >= 301) return 0.65; // 35% off
+      if (qty >= 201) return 0.70; // 30% off
+      if (qty >= 101) return 0.75; // 25% off
+      if (qty >= 51) return 0.90;  // 10% off
+      return 1.00; // No discount under 51
+    }
+
+    function calculatePrice() {
+      const sheetWidth = 8;
+      const sheetHeight = 10;
+      const minSpacing = 0.05;
+      const baseSheetCost = 10.0;
+      const backupSheetCost = 3.70;
+      const minOrderTotal = 10.0;
+
+      const borderPercentW = 2.73 / 100;
+      const borderPercentH = 7.01 / 100;
+
+      let w = parseFloat(document.getElementById('width').value);
+      let h = parseFloat(document.getElementById('height').value);
+      let qty = parseInt(document.getElementById('quantity').value);
+
+      if (isNaN(w) || isNaN(h) || isNaN(qty) || w <= 0 || h <= 0 || qty <= 0) {
+        document.getElementById('result').innerText = "Please enter valid dimensions and quantity.";
+        return;
+      }
+
+      // Apply proportional border + spacing between stickers
+      const wAdj = w * (1 + borderPercentW) + minSpacing;
+      const hAdj = h * (1 + borderPercentH) + minSpacing;
+
+      const fitOverride = parseInt(document.getElementById("fit").value);
+      const fit1 = floor(sheetWidth / wAdj) * floor(sheetHeight / hAdj);
+      const fit2 = floor(sheetWidth / hAdj) * floor(sheetHeight / wAdj);
+      let fit = Math.max(fit1, fit2);
+      if (!isNaN(fitOverride) && fitOverride > 0) fit = fitOverride;
+
+      if (fit < 1) {
+        document.getElementById('result').innerText = "Sticker is too large to fit.";
+        return;
+      }
+
+      const fullSheets = Math.floor(qty / fit);
+      const remainder = qty % fit;
+      const discount = getDiscountRate(qty);
+
+      // Base cost from full sheets
+      let totalCost = fullSheets * baseSheetCost;
+
+      if (remainder > 0) {
+        const costOfPartialStickers = (baseSheetCost / fit) * remainder;
+        if (costOfPartialStickers < baseSheetCost) {
+          totalCost += Math.max(costOfPartialStickers, backupSheetCost);
+        } else {
+          totalCost += costOfPartialStickers;
+        }
+      }
+
+      // Apply discount
+      totalCost *= discount;
+
+      // Enforce $10 minimum order
+      if (totalCost < minOrderTotal) {
+        totalCost = minOrderTotal;
+      }
+
+      const finalEach = (totalCost / qty).toFixed(2);
+      const finalTotal = totalCost.toFixed(2);
+
+      document.getElementById('result').innerHTML =
+        `Price per sticker: $${finalEach}<br>Total: <strong>$${finalTotal}</strong>`;
+    }
+  </script>
+</body>
+</html>
